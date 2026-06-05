@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#EA580C"/>
+      <stop offset="1" stop-color="#7C2D12"/>
+    </linearGradient>
+    <linearGradient id="goldF" x1="0" y1="0" x2="0" y2="64" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FDE68A"/>
+      <stop offset="1" stop-color="#F59E0B"/>
+    </linearGradient>
+    <linearGradient id="orangeS" x1="0" y1="0" x2="0" y2="64" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FBBF24"/>
+      <stop offset="1" stop-color="#D97706"/>
+    </linearGradient>
+  </defs>
+  <!-- Background rounded square -->
+  <rect width="64" height="64" rx="14" fill="url(#bg)"/>
+  <!-- Inner glow -->
+  <rect x="2" y="2" width="60" height="60" rx="12" fill="none" stroke="#FDE68A" stroke-width="0.5" opacity="0.3"/>
+  <!-- S: cursive, behind F -->
+  <path d="M 44 14 C 54 14, 56 22, 48 27 C 40 32, 32 34, 36 40 C 40 46, 50 50, 42 54"
+        stroke="url(#orangeS)" stroke-width="5.5" fill="none" stroke-linecap="round" opacity="0.75"/>
+  <!-- F: bold serif, on top of S -->
+  <!-- Vertical stem -->
+  <path d="M 16 10 L 16 56" stroke="url(#goldF)" stroke-width="6" stroke-linecap="round"/>
+  <!-- Top bar with serif -->
+  <path d="M 13 10 L 42 10" stroke="url(#goldF)" stroke-width="5.5" stroke-linecap="round"/>
+  <!-- Serif on top bar right -->
+  <path d="M 42 7 L 42 13" stroke="url(#goldF)" stroke-width="3" stroke-linecap="round"/>
+  <!-- Middle bar with serif -->
+  <path d="M 13 32 L 38 32" stroke="url(#goldF)" stroke-width="5" stroke-linecap="round"/>
+  <!-- Serif on middle bar right -->
+  <path d="M 38 29 L 38 35" stroke="url(#goldF)" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Bottom serif on stem -->
+  <path d="M 13 56 L 19 56" stroke="url(#goldF)" stroke-width="3" stroke-linecap="round"/>
+</svg>
