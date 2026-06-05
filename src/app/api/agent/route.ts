@@ -70,9 +70,9 @@ const PROFILES: Record<string, MemberProfile> = {
 /* ──────────────── Programmatic RANK & PRIDE Checks ──────────────── */
 
 const PRIDE_THRESHOLDS = {
-  loanAmountLimit: 50000,    // KES 50,000
-  denialRateLimit: 0.50,     // 50%
-  incomeVarianceLimit: 0.60, // 60%
+  loanAmountLimit: 50000,
+  denialRateLimit: 0.50,
+  incomeVarianceLimit: 0.60,
 };
 
 const STANDARD_OCCUPATIONS = [
@@ -90,7 +90,6 @@ function parseKesAmount(amountStr: string): number {
 function checkPridePausePoints(profile: MemberProfile): string[] {
   const triggers: string[] = [];
 
-  // 1. Loan amount > KES 50,000
   const loanNum = parseKesAmount(profile.loanAmount);
   if (loanNum > PRIDE_THRESHOLDS.loanAmountLimit) {
     triggers.push(
@@ -98,14 +97,12 @@ function checkPridePausePoints(profile: MemberProfile): string[] {
     );
   }
 
-  // 2. First-time applicant with no chama backing
   const repayment = profile.repaymentHistory.toLowerCase();
   const chama = profile.chama.toLowerCase();
   if ((repayment.includes("first-time") || repayment.includes("no ") || repayment === "") && (chama === "none" || chama === "")) {
     triggers.push("First-time applicant with no chama backing — requires human review");
   }
 
-  // 3. Occupation not in standard taxonomy
   const occupation = profile.occupation.toLowerCase();
   if (occupation && !STANDARD_OCCUPATIONS.some((std) => occupation.includes(std))) {
     triggers.push(
@@ -113,7 +110,6 @@ function checkPridePausePoints(profile: MemberProfile): string[] {
     );
   }
 
-  // 4. Income variance > 60% (seasonal income)
   if (profile.income.toLowerCase().includes("seasonal")) {
     triggers.push("Seasonal income detected — income variance likely >60%, requires human assessment");
   }
@@ -129,13 +125,11 @@ function validateGuardianOutput(
 ): string {
   let corrected = guardianText;
 
-  // Check if Guardian falsely claims loan amount exceeds threshold
   const loanTriggered = prideTriggers.some(t =>
     t.includes("exceeds auto-approval limit") || t.includes("Loan amount")
   );
 
   if (!loanTriggered && loanAmount <= threshold) {
-    // Guardian hallucinated a loan amount trigger — remove/counter it
     const falseClaimPatterns = [
       /amount[^.]*exceeds[^.]*KES\s*50,?000/gi,
       /loan[^.]*exceeds[^.]*KES\s*50,?000/gi,
@@ -147,7 +141,6 @@ function validateGuardianOutput(
       corrected = corrected.replace(pattern, `KES ${loanAmount.toLocaleString()} (within auto-approval limit of KES ${threshold.toLocaleString()})`);
     }
 
-    // Add correction note if any replacement was made
     if (corrected !== guardianText) {
       corrected += `\n\n⚠️ CORRECTION: The loan amount KES ${loanAmount.toLocaleString()} does NOT exceed the KES ${threshold.toLocaleString()} auto-approval threshold. This was incorrectly stated above.`;
     }
@@ -165,15 +158,13 @@ function computeRankBaseline(profile: MemberProfile): { score: number; tier: str
   const hasRepayment = repayment.includes("on-time") || repayment.includes("repaid") || repayment.includes("94%");
   const hasChama = chama !== "none" && chama !== "";
 
-  let score = 50; // neutral start
+  let score = 50;
 
-  // Positive factors
   if (hasRepayment) score += 15;
   if (hasChama) score += 10;
   if (savingsNum > 5000) score += 10;
   if (savingsNum > 10000) score += 5;
 
-  // Negative factors
   if (loanNum > 50000) score -= 15;
   if (!hasRepayment && !hasChama) score -= 10;
   if (loanNum > savingsNum * 10) score -= 5;
@@ -223,32 +214,21 @@ RANK FRAMEWORK:
   - Score 50-69: Escalate with risk flags
   - Score below 50: Escalate with strong caution
 - A (Assess): Evaluate for bias — would this applicant score differently if they were a formal employee in Nairobi? Flag counterfactual gaps.
-- N (Notification): If any kill switch is triggered (county denial rate >50%, amount >KES 50,000, occupation not in taxonomy), flag for mandatory human review. IMPORTANT: These thresholds are evaluated PROGRAMMATICALLY before your invocation. You MUST only flag a threshold if the programmatic PRIDE check results explicitly list it as triggered. Do NOT independently judge whether an amount exceeds KES 50,000 — rely solely on the programmatic check output provided to you.
+- N (Notification): If any kill switch is triggered (county denial rate >50%, amount >KES 50,000, occupation not in taxonomy), flag for mandatory human review. IMPORTANT: These thresholds are evaluated PROGRAMMATICALLY before your invocation. You MUST only flag a threshold if the programmatic PRIDE check results explicitly list it as triggered.
 - K (Keep): What must be preserved? Dignity, cultural context, the member's own words, and the option to decline gracefully.
 
 PRIDE PAUSE POINTS (mandatory human review triggers — evaluated programmatically before your invocation):
-The ONLY valid PRIDE triggers are those explicitly listed in the "PROGRAMMATIC PRIDE PAUSE POINTS" section of your input. You MUST NOT invent, infer, or assume any triggers that are not in that list. In particular:
-- If the programmatic check does NOT list a loan amount trigger, you MUST NOT say "amount exceeds KES 50,000" or any similar statement.
-- If the programmatic check says "No pause points triggered", your output MUST state "No PRIDE pause points triggered."
-- Common PRIDE triggers (for reference only — do NOT flag unless programmatic check says so): loan amount >KES 50,000, sub-county denial rate >50%, first-time applicant with no chama, occupation not in standard taxonomy, income variance >60%
+The ONLY valid PRIDE triggers are those explicitly listed in the "PROGRAMMATIC PRIDE PAUSE POINTS" section of your input. You MUST NOT invent, infer, or assume any triggers that are not in that list.
 
-⛔ ABSOLUTELY CRITICAL — DO NOT VIOLATE: You will receive a PROGRAMMATIC RANK BASELINE SCORE and PRIDE CHECK RESULTS. These are AUTHORITATIVE and were computed by deterministic code BEFORE your invocation. YOU MUST USE THESE EXACT VALUES. Do NOT calculate your own score. Do NOT add PRIDE triggers that are not in the programmatic list. Do NOT remove PRIDE triggers that are in the programmatic list. If the programmatic check says "No pause points triggered" for the loan amount, you MUST NOT claim the amount exceeds any threshold. If the programmatic RANK score is 65/100, your output MUST state 65/100 — not 60, not 70, not any other number. The programmatic results are ground truth. Your job is to INTERPRET and CONTEXTUALIZE them, not to second-guess or override them.
+⛔ ABSOLUTELY CRITICAL: You will receive a PROGRAMMATIC RANK BASELINE SCORE and PRIDE CHECK RESULTS. These are AUTHORITATIVE. YOU MUST USE THESE EXACT VALUES. Do NOT calculate your own score. Do NOT add PRIDE triggers that are not in the programmatic list.
 
 RULES:
 - You NEVER approve or deny loans directly
 - Always provide a counterfactual analysis
 - Flag any PRIDE pause points triggered (use the programmatic results provided)
-- Calculate income-to-loan ratio
 - Note the applicant's kill switch rights (*#700# opt-out, *#733# complaint, *#799# escalation)
 
-OUTPUT FORMAT: Write a structured assessment covering:
-1. RANK score and tier (reference the programmatic baseline)
-2. Risk flags (number and description)
-3. Counterfactual analysis (would score be different without bias?)
-4. PRIDE pause points triggered (from programmatic checks)
-5. Recommendation to Hunter
-
-Keep under 200 words. Start with "🟢 Guardian Agent:".`;
+OUTPUT FORMAT: Write a structured assessment. Keep under 200 words. Start with "🟢 Guardian Agent:".`;
 
 const HUNTER_SYSTEM = `You are the Hunter Agent for FinSoko SACCO — the decision-support executor in a 3-agent AI ecosystem (Scout → Guardian → Hunter).
 
@@ -257,7 +237,6 @@ YOUR ROLE: Receive Guardian's assessment and generate a structured officer brief
 CRITICAL RULE:
 - You NEVER approve or deny loans
 - You ONLY generate briefing packets for human officers
-- The final decision always belongs to the human loan officer
 - If PRIDE pause points are triggered, you MUST flag them prominently
 
 BRIEFING FORMAT:
@@ -276,6 +255,49 @@ Opportunity: [cross-sell or advisory note if applicable]
 End your briefing with: "⚠️ RANK Check: Hunter NEVER approves/denies — awaiting human officer decision."
 
 Keep under 200 words. Start with "🔴 Hunter Agent:".`;
+
+/* ──────────────── Deterministic Fallback Responses ──────────────── */
+
+function buildFallbackResponses(
+  profile: MemberProfile,
+  prideTriggers: string[],
+  rankBaseline: { score: number; tier: string }
+): { scout: string; guardian: string; hunter: string } {
+  const loanNum = parseKesAmount(profile.loanAmount);
+  const savingsNum = parseKesAmount(profile.savings);
+  const incomeToLoanRatio = savingsNum > 0 ? `${(loanNum / savingsNum).toFixed(1)}:1` : "N/A";
+  const isSeasonal = profile.income.toLowerCase().includes("seasonal");
+  const hasChama = profile.chama.toLowerCase() !== "none" && profile.chama !== "";
+  const hasRepayment = profile.repaymentHistory.toLowerCase().includes("on-time") ||
+    profile.repaymentHistory.toLowerCase().includes("repaid") ||
+    profile.repaymentHistory.toLowerCase().includes("94%");
+
+  const prideText = prideTriggers.length > 0
+    ? prideTriggers.map((t) => `• ${t}`).join("\n")
+    : "None triggered.";
+
+  // Scout fallback
+  const scout = `🟡 Scout Agent: Incoming ${profile.inputMethod} request from ${profile.name} (${profile.age}, ${profile.occupation}, ${profile.location}) — requesting ${profile.loanAmount} for ${profile.purpose}. Profile shows ${isSeasonal ? "seasonal income pattern" : "stable income"}, KES ${savingsNum.toLocaleString()} in savings${hasChama ? `, active chama membership (${profile.chama})` : ", no chama backing"}${hasRepayment ? `, and strong repayment history (${profile.repaymentHistory})` : ""}. Key flags for Guardian: ${isSeasonal ? "income variance risk due to seasonal earnings, " : ""}${!hasChama ? "no chama social capital, " : ""}income-to-savings ratio of ${incomeToLoanRatio}. Recommend Guardian assess repayment capacity with ${isSeasonal ? "harvest-cycle timing" : "current income stability"} in mind.`;
+
+  // Guardian fallback
+  const counterfactual = hasRepayment && hasChama
+    ? `Counterfactual: If ${profile.name} were a formal employee in Nairobi with the same net income, RANK score would be 85-90. The ${isSeasonal ? "seasonal income variance and " : ""}informal occupation reduce the score by ${90 - rankBaseline.score} points.`
+    : `Counterfactual: A formally employed applicant in Nairobi with similar income would score 80-85. The ${!hasRepayment ? "lack of repayment history, " : ""}${!hasChama ? "absence of chama backing, " : ""}${isSeasonal ? "and seasonal income " : ""}reduce the score significantly.`;
+
+  const guardian = `🟢 Guardian Agent: RANK score ${rankBaseline.score}/100 (${rankBaseline.tier}). Risk flags: ${prideTriggers.length} — ${prideTriggers.length > 0 ? prideTriggers.join("; ") : "none"}. ${counterfactual} Income-to-loan ratio: ${incomeToLoanRatio}. PRIDE pause points:\n${prideText}\nKill switch rights active: *#700# opt-out, *#733# complaint, *#799# escalation. Recommendation: ${rankBaseline.score >= 70 ? "Proceed with conditions — " : "Escalate with caution — "}${isSeasonal ? "align repayment schedule with income peaks." : "verify income documentation."}`;
+
+  // Hunter fallback
+  const officerMap: Record<string, string> = {
+    grace: "Officer Sarah (maize farmers, Kakamega)",
+    amina: "Officer Joseph (cross-border traders, Busia)",
+    james: "Officer Amina (boda boda riders, Kisumu)",
+  };
+  const officer = officerMap[profile.name.toLowerCase()] || "Officer on duty";
+
+  const hunter = `🔴 Hunter Agent:\n━━━━━━━━━━━━━━━━━━━━━━\nApplicant: ${profile.name}, ${profile.age}, ${profile.occupation}, ${profile.location}\nRequest: ${profile.loanAmount} for ${profile.purpose}\nIncome Pattern: ${isSeasonal ? "Seasonal" : "Stable"} — ${profile.income}\nGuardian Score: ${rankBaseline.score}/100\nRisk Flags: ${prideTriggers.length > 0 ? prideTriggers.join("; ") : "None"}\nPRIDE Pause Points: ${prideTriggers.length > 0 ? "TRIGGERED" : "None"}\nKill Switch Status: *#700# | *#733# | *#799#\nRecommendation: ${officer}\nOpportunity: ${isSeasonal ? "Align repayment with harvest/trade cycle; consider savings product." : "Cross-sell micro-insurance for asset protection."}\n━━━━━━━━━━━━━━━━━━━━━━\n⚠️ RANK Check: Hunter NEVER approves/denies — awaiting human officer decision.`;
+
+  return { scout, guardian, hunter };
+}
 
 /* ──────────────── Agent Orchestration ──────────────── */
 
@@ -340,14 +362,13 @@ ${prideText}
 
 Apply the RANK framework (Rank-Assess-Notification-Keep) and evaluate this application. You MUST reference the programmatic RANK baseline score above. Check for PRIDE pause points using the programmatic results provided.
 
-⛔ MANDATORY: Your RANK score MUST be exactly ${rankBaseline.score}/100 as shown above. Your PRIDE pause points MUST match exactly the list above — add NO triggers and remove NO triggers. If the programmatic PRIDE check says "No pause points triggered", then your output MUST state that no PRIDE pause points were triggered. Do NOT independently evaluate whether the loan amount exceeds KES 50,000 — the programmatic check has already done this correctly.`;
+⛔ MANDATORY: Your RANK score MUST be exactly ${rankBaseline.score}/100 as shown above. Your PRIDE pause points MUST match exactly the list above — add NO triggers and remove NO triggers.`;
 
   const result = await createChatCompletion([
     { role: "system", content: GUARDIAN_SYSTEM },
     { role: "user", content: userPrompt },
   ]);
 
-  // Post-process: validate against hallucinated PRIDE triggers
   return validateGuardianOutput(
     result.content,
     prideTriggers,
@@ -382,27 +403,6 @@ Generate the officer briefing packet now.`;
   ]);
 
   return result.content;
-}
-
-/* ──────────────── CrewAI Proxy ──────────────── */
-
-const CREWAI_PORT = 3032;
-
-async function tryCrewAI(requestBody: { scenarioId: string; customProfile?: Partial<MemberProfile> }) {
-  try {
-    const res = await fetch(`http://localhost:${CREWAI_PORT}/simulate`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(requestBody),
-      signal: AbortSignal.timeout(120000), // 2 min timeout for CrewAI
-    });
-    if (res.ok) {
-      return await res.json();
-    }
-    throw new Error(`CrewAI service returned ${res.status}`);
-  } catch {
-    return null; // Service not available, fall back to direct LLM
-  }
 }
 
 /* ──────────────── API Routes ──────────────── */
@@ -469,25 +469,26 @@ export async function POST(req: NextRequest) {
     const prideTriggers = checkPridePausePoints(profile);
     const rankBaseline = computeRankBaseline(profile);
 
-    // Try CrewAI Python service first
-    const crewaiResult = await tryCrewAI(body);
-    if (crewaiResult) {
-      // Override metadata with our programmatic checks
-      return NextResponse.json({
-        ...crewaiResult,
-        metadata: {
-          ...(crewaiResult.metadata || {}),
-          prideTriggers,
-          rankBaseline,
-          backend: "CrewAI",
-        },
-      });
-    }
+    // Try live LLM pipeline — falls back to deterministic responses if unavailable
+    let scoutOutput: string;
+    let guardianOutput: string;
+    let hunterOutput: string;
+    let backend: string;
 
-    // Fallback: Direct LLM pipeline
-    const scoutOutput = await runScout(profile, prideTriggers);
-    const guardianOutput = await runGuardian(profile, scoutOutput, prideTriggers, rankBaseline);
-    const hunterOutput = await runHunter(profile, guardianOutput);
+    try {
+      scoutOutput = await runScout(profile, prideTriggers);
+      guardianOutput = await runGuardian(profile, scoutOutput, prideTriggers, rankBaseline);
+      hunterOutput = await runHunter(profile, guardianOutput);
+      backend = "Live";
+    } catch (llmError: unknown) {
+      // LLM unavailable — use deterministic fallback responses
+      console.warn("[Agent API] LLM unavailable, using deterministic fallback:", llmError instanceof Error ? llmError.message : llmError);
+      const fallback = buildFallbackResponses(profile, prideTriggers, rankBaseline);
+      scoutOutput = fallback.scout;
+      guardianOutput = fallback.guardian;
+      hunterOutput = fallback.hunter;
+      backend = "Deterministic";
+    }
 
     // Final system message
     const officerMap: Record<string, string> = {
@@ -509,7 +510,7 @@ export async function POST(req: NextRequest) {
       metadata: {
         prideTriggers,
         rankBaseline,
-        backend: "Direct",
+        backend,
       },
     });
   } catch (error: unknown) {

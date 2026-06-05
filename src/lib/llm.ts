@@ -9,7 +9,7 @@
  *   - LLM_USER_ID   (optional) — User identifier
  *   - LLM_CHAT_ID   (optional) — Chat session identifier
  *
- * Falls back to a local development proxy (localhost:3031) when env vars are not set.
+ * Falls back to a local development proxy when env vars are not set.
  */
 
 /* ──────────────── Public API ──────────────── */
@@ -103,6 +103,7 @@ async function callProxy(messages: ChatMessage[]): Promise<ChatCompletionResult>
  * Create a chat completion.
  *
  * Tries the configured API first, then falls back to a local dev proxy.
+ * The caller should catch errors and use a deterministic fallback.
  */
 export async function createChatCompletion(
   messages: ChatMessage[]
@@ -123,9 +124,6 @@ export async function createChatCompletion(
     // Proxy not available
   }
 
-  // Both failed
-  throw new Error(
-    `LLM unavailable. ${hasApiConfig ? "API call failed." : "API not configured (set LLM_API_URL and LLM_API_KEY env vars)."} ` +
-    "Local proxy also unavailable. Check your LLM configuration."
-  );
+  // Both failed — caller should use deterministic fallback
+  throw new Error("LLM unavailable. API not configured or call failed. Local proxy also unavailable.");
 }

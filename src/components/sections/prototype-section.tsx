@@ -120,6 +120,24 @@ const INCOME_OPTIONS = [
   'Stable year-round',
 ];
 
+const CHAMA_OPTIONS = [
+  'None',
+  '4-member group',
+  '8-member group',
+  '12-member group (94% repayment rate)',
+  '15-member group (90% repayment rate)',
+  '20+ member group',
+];
+
+const REPAYMENT_OPTIONS = [
+  'Not specified',
+  'First-time loan applicant',
+  'Previous small loan repaid on time',
+  '90%+ on-time repayment',
+  '80%+ on-time repayment',
+  'Missed one payment, now current',
+];
+
 const EMPTY_CUSTOM: CustomProfile = {
   name: '',
   age: 30,
@@ -128,8 +146,8 @@ const EMPTY_CUSTOM: CustomProfile = {
   children: 0,
   income: 'Seasonal - harvest peaks',
   savings: '',
-  chama: '',
-  repaymentHistory: '',
+  chama: 'None',
+  repaymentHistory: 'Not specified',
   loanAmount: '',
   purpose: '',
   smsText: '',
@@ -287,7 +305,7 @@ function AgentSimulator() {
         income: customForm.income || 'Not specified',
         savings: customForm.savings || 'Not specified',
         chama: customForm.chama || 'None',
-        repaymentHistory: 'Not specified',
+        repaymentHistory: customForm.repaymentHistory || 'Not specified',
         loanAmount: customForm.loanAmount || 'Not specified',
         purpose: customForm.purpose || 'Not specified',
         smsText: customForm.smsText || '',
@@ -598,6 +616,58 @@ function AgentSimulator() {
                   onChange={(e) => updateCustomField('savings', e.target.value)}
                   disabled={isRunning}
                 />
+              </div>
+
+              {/* Chama Affiliation */}
+              <div className="space-y-1.5">
+                <Label htmlFor="chama" className="text-sm font-medium">
+                  Chama Affiliation
+                </Label>
+                <Select
+                  value={customForm.chama || 'None'}
+                  onValueChange={(val) => updateCustomField('chama', val)}
+                  disabled={isRunning}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select chama status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CHAMA_OPTIONS.map((opt) => (
+                      <SelectItem key={opt} value={opt}>
+                        {opt}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Chama membership provides social capital and group repayment guarantee
+                </p>
+              </div>
+
+              {/* Repayment History */}
+              <div className="space-y-1.5">
+                <Label htmlFor="repaymentHistory" className="text-sm font-medium">
+                  Repayment History
+                </Label>
+                <Select
+                  value={customForm.repaymentHistory || 'Not specified'}
+                  onValueChange={(val) => updateCustomField('repaymentHistory', val)}
+                  disabled={isRunning}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select repayment history" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {REPAYMENT_OPTIONS.map((opt) => (
+                      <SelectItem key={opt} value={opt}>
+                        {opt}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Past repayment behavior affects RANK score and auto-approval eligibility
+                </p>
               </div>
             </div>
 
